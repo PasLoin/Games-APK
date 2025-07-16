@@ -181,7 +181,10 @@ export default function SnakeGame({ initialSpeed, onExit }: SnakeGameProps) {
 
   return (
     <View style={styles.container}>
-      <Canvas style={{ width, height, position: 'absolute', top: 0, left: 0 }}>
+      <Canvas
+        pointerEvents="none"
+        style={{ width, height, position: 'absolute', top: 0, left: 0 }}
+      >
         {snake.map((p, i) => (
           <Circle
             key={i}
