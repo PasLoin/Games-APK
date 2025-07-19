@@ -26,6 +26,14 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            build-tools;35.0.0
+            platforms;android-35
+            ndk;27.1.12297006
+
       - name: Install dependencies
         run: npm install
 
