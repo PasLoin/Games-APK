@@ -26,6 +26,7 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
+
       - name: Install dependencies
         run: npm install
 
@@ -34,10 +35,11 @@ jobs:
 
         run: chmod +x android/gradlew
 
+
       - name: Build Release APK
 
         run: ./gradlew assembleRelease --no-daemon
-        working-directory: android 
+        working-directory: android
 
       - name: Upload Release APK as Artifact
         uses: actions/upload-artifact@v4

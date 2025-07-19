@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, PanResponder, Dimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Canvas, Circle } from '@shopify/react-native-skia';
 
 const COLS = 20;
@@ -7,6 +8,11 @@ const ROWS = 30;
 const INITIAL_SNAKE = [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }];
 
 interface Point { x: number; y: number; }
+
+interface ScoreEntry {
+  score: number;
+  date: string;
+}
 
 function randomFood(snake: Point[]): Point {
   let food: Point;
@@ -103,7 +109,21 @@ export default function SnakeGame({ initialSpeed, onExit }: SnakeGameProps) {
   const [gameOver, setGameOver] = useState(false);
   const [showBack, setShowBack] = useState(false);
   const hideBackTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [highScores, setHighScores] = useState<ScoreEntry[]>([]);
   const [windowDims, setWindowDims] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('highScores');
+        if (stored) {
+          setHighScores(JSON.parse(stored));
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -120,6 +140,12 @@ export default function SnakeGame({ initialSpeed, onExit }: SnakeGameProps) {
   useEffect(() => {
     setSpeed(initialSpeed);
   }, [initialSpeed]);
+
+  useEffect(() => {
+    if (gameOver) {
+      saveHighScore(score);
+    }
+  }, [gameOver, saveHighScore, score]);
 
   useEffect(() => {
     if (gameOver) return;
@@ -165,6 +191,22 @@ export default function SnakeGame({ initialSpeed, onExit }: SnakeGameProps) {
     });
   };
 
+  const saveHighScore = useCallback(
+    async (val: number) => {
+      try {
+        const entry: ScoreEntry = { score: val, date: new Date().toISOString() };
+        const updated = [...highScores, entry]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
+        setHighScores(updated);
+        await AsyncStorage.setItem('highScores', JSON.stringify(updated));
+      } catch (e) {
+        // ignore errors
+      }
+    },
+    [highScores],
+  );
+
   const resetGame = () => {
     setSnake(INITIAL_SNAKE);
     setDirection({ x: 1, y: 0 });
@@ -203,6 +245,12 @@ export default function SnakeGame({ initialSpeed, onExit }: SnakeGameProps) {
       {gameOver && (
         <TouchableOpacity onPress={resetGame} style={styles.gameOver}>
           <Text style={styles.gameOverText}>Game Over - Tap to Restart</Text>
+          <Text style={styles.highScoresTitle}>Meilleurs Scores</Text>
+          {highScores.map((h, i) => (
+            <Text key={i} style={styles.highScoreItem}>
+              {h.date.slice(0, 10)} - {h.score}
+            </Text>
+          ))}
         </TouchableOpacity>
       )}
       {showBack && (
@@ -228,7 +276,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-    color: '#fff',
+    color: 'red',
     fontSize: 18,
   },
   joystick: {
@@ -262,6 +310,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   gameOverText: {
+    color: '#fff',
+  },
+  highScoresTitle: {
+    marginTop: 10,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  highScoreItem: {
     color: '#fff',
   },
   backButton: {
